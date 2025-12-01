@@ -1,34 +1,43 @@
-from azure.storage.blob import BlobServiceClient
-import pandas as pd
 import os
+import pandas as pd
+from azure.storage.blob import BlobServiceClient
 
+# Read connection string from GitHub Actions environment
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+
+# Connect to Azure Storage
+blob_service = BlobServiceClient.from_connection_string(connection_string)
 
 raw_container = "raw"
 clean_container = "clean"
 
-# List all blobs in raw container
-raw_blobs = blob_service_client.get_container_client(raw_container).list_blobs()
+raw_client = blob_service.get_container_client(raw_container)
+clean_client = blob_service.get_container_client(clean_container)
 
-for blob in raw_blobs:
+print("Listing files in raw container...")
+
+# Loop through all files in raw/
+for blob in raw_client.list_blobs():
     blob_name = blob.name
-    print(f"Processing {blob_name}...")
+    print(f"Processing {blob_name} ...")
 
-    # Download
-    raw_blob = blob_service_client.get_blob_client(container=raw_container, blob=blob_name)
-    downloaded = raw_blob.download_blob().readall()
-    with open("temp.csv", "wb") as f:
-        f.write(downloaded)
+    # Download file
+    raw_blob = raw_client.get_blob_client(blob_name)
+    data = raw_blob.download_blob().content_as_text()
 
-    # Transform
-    df = pd.read_csv("temp.csv")
+    # Use pandas to transform
+    df = pd.read_csv(pd.compat.StringIO(data))
     df = df.dropna()
-    df.to_csv("temp_clean.csv", index=False)
 
-    # Upload to clean container
-    clean_blob = blob_service_client.get_blob_client(container=clean_container, blob=f"cleaned-{blob_name}")
-    with open("temp_clean.csv", "rb") as f:
-        clean_blob.upload_blob(f, overwrite=True)
+    # Convert cleaned data to CSV (in memory)
+    output = df.to_csv(index=False)
 
-    print(f"{blob_name} processed and uploaded.")
+    # Upload cleaned version: cleaned-input.csv
+    clean_name = f"cleaned-{blob_name}"
+    clean_blob = clean_client.get_blob_client(clean_name)
+
+    clean_blob.upload_blob(output, overwrite=True)
+
+    print(f"Uploaded cleaned file -> {clean_name}")
+
+print("All files processed.")

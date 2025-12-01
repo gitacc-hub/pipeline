@@ -1,20 +1,19 @@
-name: Simple Data Pipeline
+name: Transform Azure Blob Files
 
 on:
   push:
     paths:
-      - "raw/**"
+      - "scripts/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
 
 jobs:
-  run-pipeline:
+  transform:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -22,9 +21,9 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install pandas azure-storage-blob
 
-      - name: Run pipeline
+      - name: Run transformation
         env:
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-        run: python scripts/transform.py 
+        run: python scripts/transform.py
