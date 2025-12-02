@@ -1,16 +1,17 @@
-import os
-import pandas as pd
-from io import StringIO
-from azure.storage.blob import BlobServiceClient
+import os #Read env files (azure connection string)
+import pandas as pd #Used to transform csv files
+from io import StringIO #Turn text in file like object
+from azure.storage.blob import BlobServiceClient #Allows python to connect to Azure Blob Storage
 
 # Read connection string from GitHub Actions environment
-connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING") #Pulls Secret codes stored in Github Secrets
 
 # Connect to Azure Storage
 blob_service = BlobServiceClient.from_connection_string(connection_string)
+# Creates a connection object .Your pipeline uses this to read and write files from Azure
 
-raw_container = "raw"
-clean_container = "clean"
+raw_container = "raw" # Local of inout files
+clean_container = "clean" #Location where clean files go
 
 raw_client = blob_service.get_container_client(raw_container)
 clean_client = blob_service.get_container_client(clean_container)
